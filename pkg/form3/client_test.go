@@ -76,10 +76,22 @@ const (
 	}`
 )
 
+func Form3HTTPSTestServer(handler http.Handler) (*httptest.Server, error) {
+    ts := httptest.NewUnstartedServer(handler)
+    cert, err := tls.LoadX509KeyPair("./test_certs/server.crt", "./test_certs/server.key")
+    if err != nil {
+        return nil, err
+    }
+    ts.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+    ts.StartTLS()
+    return ts, nil
+}
+
+
 func Form3APIResponseStub() *httptest.Server {
 	var resp string
 
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return Form3HTTPSTestServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
 			resp = postResponse
@@ -114,6 +126,7 @@ func TestFetchAccounts(t *testing.T) {
 func TestCreateAccount(t *testing.T) {
 	server := Form3APIResponseStub()
 	url, _ := url.Parse(server.URL)
+
 	defer server.Close()
 
 	client := NewClient(httpClient, url)

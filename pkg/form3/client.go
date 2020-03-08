@@ -2,14 +2,20 @@ package form3
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"path"
 	"time"
+
+	"golang.org/x/net/http2"
 )
 
 //Client struct
@@ -32,12 +38,57 @@ type restClient struct {
 	ResponseRef interface{}
 }
 
+func TransportSetup() *http2.Transport {
+	return &http2.Transport{
+		TLSClientConfig:    TlsConfig(),
+		DisableCompression: true,
+		AllowHTTP:          false,
+	}
+}
+
+func TlsConfig() *tls.Config {
+	crt, err := ioutil.ReadFile("./cert/public.crt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rootCAs := x509.NewCertPool()
+	rootCAs.AppendCertsFromPEM(crt)
+
+	return &tls.Config{
+		RootCAs:            rootCAs,
+		InsecureSkipVerify: false,
+	}
+}
+
 // NewClient creates a new Client
 // if NewClient is nil then a DefaultClient is used
-func NewClient(httpClient *http.Client, baseURL *url.URL) *Client {
+func NewClient(httpClient *http.Client, baseURL *url.URL, certPath string keyPath string) *Client {
+
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a CA certificate pool and add cert.pem to it
+	caCert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Create a HTTPS client and supply the created CA pool and certificate
+
 	if httpClient == nil {
 		httpClient = &http.Client{
-			Timeout: 5 * time.Minute,
+			Timeout:   5 * time.Minute,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: caCertPool,
+					Certificates: []tls.Certificate{cert},
+				},
+			},
 		}
 	}
 	client := &Client{
