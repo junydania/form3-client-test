@@ -32,11 +32,9 @@ type restClient struct {
 	ResponseRef interface{}
 }
 
-const baseURL = "https://api.staging-form3.tech/v1"
-
-// NewHTTPClient creates a new Client
-// if httpClient is nil then a DefaultClient is used
-func NewHTTPClient(httpClient *http.Client, baseURL *url.URL) *Client {
+// NewClient creates a new Client
+// if NewClient is nil then a DefaultClient is used
+func NewClient(httpClient *http.Client, baseURL *url.URL) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{
 			Timeout: 5 * time.Minute,
@@ -83,10 +81,10 @@ func (rc *restClient) Call() error {
 	}
 	defer resp.Body.Close()
 	if rc.Debug {
-		responseDump, _ := httputil.DumpResponse(resp, true)
-		fmt.Println(string(responseDump))
+		respDump, _ := httputil.DumpResponse(resp, true)
+		fmt.Println(string(respDump))
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode > 299 {
 		if rc.ErrorRef != nil {
 			err = json.NewDecoder(resp.Body).Decode(rc.ErrorRef)
 		}
@@ -165,10 +163,10 @@ func (c *Client) ListAccounts(pageNUmber int, pageSize int) (*ListResponse, erro
 	var resp ListResponse
 
 	err := c.Start(&resp, nil).
-		WithUri("/organisation/accounts").
+		WithURI("/organisation/accounts").
 		SetParameter("page[number]", pageNUmber).
 		SetParameter("page[size]", pageSize).
-		WithMethod(http.MethodGet).
+		SetMethod(http.MethodGet).
 		Call()
 	return &resp, err
 }
@@ -180,8 +178,8 @@ func (c *Client) CreateAccount(request CreateAccountRequest) (*CreateAccountResp
 
 	restClient := c.Start(&resp, &errors)
 	err := restClient.WithURI("/organisation/accounts").
-		WithJSONBody(request).
-		WithMethod(http.MethodPost).
+		SetJSONBody(request).
+		SetMethod(http.MethodPost).
 		Call()
 	if restClient.ErrorRef == nil {
 		return &resp, nil, err
@@ -190,19 +188,15 @@ func (c *Client) CreateAccount(request CreateAccountRequest) (*CreateAccountResp
 }
 
 // FetchAccount action
-func (c *Client) FetchAccount(accountID string) (*FetchAccountResponse, *Errors, error) {
+func (c *Client) FetchAccount(accountID string) (*FetchAccountResponse, error) {
 	var resp FetchAccountResponse
-	var errors Errors
 
-	restClient := c.Start(&resp, &errors)
-	err := restClient.WithURI("/organisation/accounts").
+	err := c.Start(&resp, nil).
+		WithURI("/organisation/accounts/").
 		WithURISegment(accountID).
-		WithMethod(http.MethodGet).
+		SetMethod(http.MethodGet).
 		Call()
-	if restClient.ErrorRef == nil {
-		return &resp, nil, err
-	}
-	return &resp, &errors, err
+	return &resp, err
 }
 
 // DeleteAccount action
@@ -214,7 +208,7 @@ func (c *Client) DeleteAccount(accountID string, version int) (*BaseHTTPResponse
 	err := restClient.WithURI("/organisation/accounts").
 		WithURISegment(accountID).
 		SetParameter("version", version).
-		WithMethod(http.MethodDelete).
+		SetMethod(http.MethodDelete).
 		Call()
 	if restClient.ErrorRef == nil {
 		return &resp, nil, err
