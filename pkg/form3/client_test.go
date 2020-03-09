@@ -76,22 +76,21 @@ const (
 	}`
 )
 
-func Form3HTTPSTestServer(handler http.Handler) (*httptest.Server, error) {
-    ts := httptest.NewUnstartedServer(handler)
-    cert, err := tls.LoadX509KeyPair("./test_certs/server.crt", "./test_certs/server.key")
-    if err != nil {
-        return nil, err
-    }
-    ts.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
-    ts.StartTLS()
-    return ts, nil
-}
-
+// func Form3HTTPSTestServer(handler http.Handler) (*httptest.Server, error) {
+// 	ts := httptest.NewUnstartedServer(handler)
+// 	cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	ts.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+// 	ts.StartTLS()
+// 	return ts, nil
+// }
 
 func Form3APIResponseStub() *httptest.Server {
 	var resp string
 
-	return Form3HTTPSTestServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
 			resp = postResponse
@@ -102,7 +101,7 @@ func Form3APIResponseStub() *httptest.Server {
 				resp = listResponse
 			}
 		case "DELETE":
-			resp = ""
+			resp = "OK"
 		default:
 			http.Error(w, "not found", http.StatusNotFound)
 			return
@@ -117,7 +116,7 @@ func TestFetchAccounts(t *testing.T) {
 	server := Form3APIResponseStub()
 	url, _ := url.Parse(server.URL)
 	defer server.Close()
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "certs/client.pem", "certs/client.key")
 	account, err := client.FetchAccount(accountId)
 	assert.NoError(t, err)
 	assert.Equal(t, accountId, account.Data.OrganisationID)
@@ -129,7 +128,7 @@ func TestCreateAccount(t *testing.T) {
 
 	defer server.Close()
 
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "certs/client.pem", "certs/client.key")
 
 	postRequest := CreateAccountRequest{
 		Data: CreateAccount{
@@ -157,7 +156,7 @@ func TestDeleteAccounts(t *testing.T) {
 	url, _ := url.Parse(server.URL)
 	defer server.Close()
 
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "certs/client.pem", "certs/client.key")
 	account, _, err := client.DeleteAccount(accountId, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, account.StatusCode)
@@ -167,7 +166,7 @@ func TestListAccounts(t *testing.T) {
 	server := Form3APIResponseStub()
 	url, err := url.Parse(server.URL)
 	defer server.Close()
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "certs/client.pem", "certs/client.key")
 	accounts, err := client.ListAccounts(1, 100)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(accounts.Data))

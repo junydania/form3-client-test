@@ -14,8 +14,6 @@ import (
 	"net/url"
 	"path"
 	"time"
-
-	"golang.org/x/net/http2"
 )
 
 //Client struct
@@ -38,32 +36,10 @@ type restClient struct {
 	ResponseRef interface{}
 }
 
-func TransportSetup() *http2.Transport {
-	return &http2.Transport{
-		TLSClientConfig:    TlsConfig(),
-		DisableCompression: true,
-		AllowHTTP:          false,
-	}
-}
-
-func TlsConfig() *tls.Config {
-	crt, err := ioutil.ReadFile("./cert/public.crt")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	rootCAs := x509.NewCertPool()
-	rootCAs.AppendCertsFromPEM(crt)
-
-	return &tls.Config{
-		RootCAs:            rootCAs,
-		InsecureSkipVerify: false,
-	}
-}
 
 // NewClient creates a new Client
 // if NewClient is nil then a DefaultClient is used
-func NewClient(httpClient *http.Client, baseURL *url.URL, certPath string keyPath string) *Client {
+func NewClient(httpClient *http.Client, baseURL *url.URL, certPath string, keyPath string) *Client {
 
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
@@ -82,10 +58,10 @@ func NewClient(httpClient *http.Client, baseURL *url.URL, certPath string keyPat
 
 	if httpClient == nil {
 		httpClient = &http.Client{
-			Timeout:   5 * time.Minute,
+			Timeout: 5 * time.Minute,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					RootCAs: caCertPool,
+					RootCAs:      caCertPool,
 					Certificates: []tls.Certificate{cert},
 				},
 			},
