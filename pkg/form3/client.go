@@ -17,7 +17,7 @@ type Client struct {
 	HTTPClient *http.Client
 	BaseURL    *url.URL
 	Debug      bool
-	AuthKey    string
+	AuthToken  string
 }
 
 // restClient struct
@@ -34,7 +34,7 @@ type restClient struct {
 
 // NewClient creates a new Client
 // if NewClient is nil then a DefaultClient is used
-func NewClient(httpClient *http.Client, baseURL *url.URL) *Client {
+func NewClient(httpClient *http.Client, baseURL *url.URL, authToken string) *Client {
 
 	if httpClient == nil {
 		httpClient = &http.Client{
@@ -44,6 +44,7 @@ func NewClient(httpClient *http.Client, baseURL *url.URL) *Client {
 	client := &Client{
 		HTTPClient: httpClient,
 		BaseURL:    baseURL,
+		AuthToken:  authToken,
 	}
 
 	return client
@@ -51,7 +52,7 @@ func NewClient(httpClient *http.Client, baseURL *url.URL) *Client {
 
 // Start initializes the start anonymous function and sets the authorozation token
 func (c *Client) Start(responseRef interface{}, errorRef interface{}) *restClient {
-	return c.StartAnonymous(responseRef, errorRef).SetAuthorization(c.AuthKey)
+	return c.StartAnonymous(responseRef, errorRef).SetAuthorization(c.AuthToken)
 }
 
 // StartAnonymous creates rest client setting the content type
@@ -106,7 +107,8 @@ func (rc *restClient) SetHeader(key string, value string) *restClient {
 
 func (rc *restClient) SetAuthorization(key string) *restClient {
 	if key != "" {
-		rc.WithHeader("Authorization", key)
+		var bearer = "Bearer " + key
+		rc.WithHeader("Authorization", bearer)
 	}
 	return rc
 }

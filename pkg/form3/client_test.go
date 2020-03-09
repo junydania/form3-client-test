@@ -105,7 +105,7 @@ func TestFetchAccounts(t *testing.T) {
 	server := Form3APIResponseStub()
 	url, _ := url.Parse(server.URL)
 	defer server.Close()
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "")
 	account, err := client.FetchAccount(accountID)
 	assert.NoError(t, err)
 	assert.Equal(t, accountID, account.Data.OrganisationID)
@@ -117,7 +117,7 @@ func TestCreateAccount(t *testing.T) {
 
 	defer server.Close()
 
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "")
 
 	postRequest := CreateAccountRequest{
 		Data: CreateAccount{
@@ -145,7 +145,7 @@ func TestDeleteAccounts(t *testing.T) {
 	url, _ := url.Parse(server.URL)
 	defer server.Close()
 
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "")
 	account, _, err := client.DeleteAccount(accountID, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, account.StatusCode)
@@ -155,7 +155,7 @@ func TestListAccounts(t *testing.T) {
 	server := Form3APIResponseStub()
 	url, err := url.Parse(server.URL)
 	defer server.Close()
-	client := NewClient(httpClient, url)
+	client := NewClient(httpClient, url, "")
 	accounts, err := client.ListAccounts(1, 100)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(accounts.Data))
